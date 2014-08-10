@@ -31,6 +31,6 @@ Turn options on with `-D` flags. For example to activate code inside `#ifdef DEB
 Feedback
 --------
 
-Please open issues if you have improvements/cross-references/additions you'd like to see
+Please [open an issue](https://github.com/phylake/haskell-web-seed/issues/new) if you have improvements/cross-references/additions you'd like to see
 
 Look for more instructions and documentation in the source.
