@@ -14,6 +14,7 @@ import           Data.Conduit
 import           Data.Maybe (listToMaybe)
 import           Data.Monoid ((<>))
 import           Data.Text (Text)
+import           Database.PostgreSQL.Simple as PG
 import           Database.Redis as R
 import           Network.HTTP.Conduit (withManager, responseBody, RequestBody(..))
 import           Network.HTTP.Types.Method (parseMethod, StdMethod(..))
@@ -53,6 +54,13 @@ main = do
 #ifdef USE_REDIS
       rConn <- R.connect R.defaultConnectInfo {
         R.connectPort = PortNumber (fromIntegral cfgRedisPort)
+      }
+#endif
+
+#ifdef USE_POSTGRESQL
+      sqlConn <- PG.connect PG.defaultConnectInfo {
+        PG.connectUser = cfgPgUser
+      , PG.connectDatabase = cfgPgDatabase
       }
 #endif
 

@@ -30,6 +30,7 @@ executable web-seed
                      , hedis ==0.*
                      , http-conduit ==2.*
                      , http-types ==0.*
+                     , postgresql-simple ==0.*
                      , split ==0.*
                      , streaming-commons ==0.*
                      , text ==1.*
