@@ -32,3 +32,10 @@ s404 :: IO Response
 s404 = return
      $ responseBuilder status404 [("Content-Type", "text/plain")]
      $ copyByteString "404"
+
+-- | 500 Internal Server Error
+-- http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.5.1
+s500 :: IO Response
+s500 = return
+     $ responseBuilder status500 []
+     $ copyByteString ""
