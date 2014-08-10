@@ -1,0 +1,14 @@
+# Haskell
+dist
+cabal-dev
+*.o
+*.hi
+*.chi
+*.chs.h
+.virthualenv
+
+# binaries
+main
+
+# OS X stuff
+.DS_Store
