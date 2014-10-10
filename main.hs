@@ -15,16 +15,18 @@ import           Data.Maybe (listToMaybe)
 import           Data.Monoid ((<>))
 import           Data.Text (Text)
 import           Database.Redis as R
+import           Filesystem.Path hiding ((</>))
 import           Network.HTTP.Conduit (withManager, responseBody, RequestBody(..))
 import           Network.HTTP.Types.Method (parseMethod, StdMethod(..))
 import           Network.HTTP.Types.Status (status200)
 import           Network.Wai
+import           Network.Wai.Application.Static
 import           Network.Wai.Handler.Warp (run)
 import           Network.Wai.Parse
 import           Seed.Data
 import           Seed.HTTP
 import           Seed.Util
-import           System.Directory (doesFileExist)
+import           System.Directory (createDirectoryIfMissing)
 import           System.Environment (getArgs)
 import           System.Exit (exitFailure)
 import           System.FilePath ((</>))
@@ -70,6 +72,7 @@ main = do
         flushLogStr logWarnSet
         flushLogStr logErrorSet
 #else
+      createDirectoryIfMissing True cfgLogDir
       logInfoSet <- newFileLoggerSet defaultBufSize $ cfgLogDir </> "info.log"
       logWarnSet <- newFileLoggerSet defaultBufSize $ cfgLogDir </> "warn.log"
       logErrorSet <- newFileLoggerSet defaultBufSize $ cfgLogDir </> "error.log"
@@ -88,10 +91,11 @@ main = do
       -- END signals
 
       logInfo $ "starting haskell-web-seed on " ++ show cfgBindPort
-      run cfgBindPort $ seedApplication env
+      let staticMiddleware = staticApp $ defaultFileServerSettings "public/"
+      run cfgBindPort $ seedApplication env staticMiddleware
 
-seedApplication :: SeedEnv -> Application
-seedApplication SeedEnv{..} req = do
+seedApplication :: SeedEnv -> Application -> Application
+seedApplication SeedEnv{..} staticMiddleware req = do
   logInfo $ T.concat ["/", T.intercalate "/" $ pathInfo req]
   case parseMethod (requestMethod req) of
     Right GET -> case pathInfo req of
@@ -109,15 +113,7 @@ seedApplication SeedEnv{..} req = do
             Just redisValue -> s200 $ byteString2Text redisValue
 #endif
       -- try to find HTML to return
-      path -> do
-        let fp = "public" </> (T.unpack $ T.intercalate "/" path)
-        exists <- doesFileExist fp
-        if exists
-          then return $
-               responseFile status200 [("Content-Type", "text/html")] fp Nothing
-          else do
-            logInfo ("Right GET otherwise" :: Text)
-            s404
+      path -> staticMiddleware req
     Right POST -> case pathInfo req of
       -- goto http://localhost:3000/image_form.html
       ["upload", "image"] -> do

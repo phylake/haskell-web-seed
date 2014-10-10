@@ -35,6 +35,7 @@ executable web-seed
                      , text ==1.*
                      , unix ==2.*
                      , wai ==2.*
+                     , wai-app-static ==2.*
                      , wai-extra ==2.*
                      , warp ==2.*
                      , zlib ==0.*
