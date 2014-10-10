@@ -1,6 +1,12 @@
 Haskell Web seed
 ================
 
+Starter app for web development
+- Logging with [fast-logger](http://www.yesodweb.com/blog/2014/01/new-fast-logger)
+- Static assets with wai-app-static
+- Caching with Redis
+- AWS service integration
+
 Prerequisites
 -------------
 
