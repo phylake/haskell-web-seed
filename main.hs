@@ -15,7 +15,6 @@ import           Data.Maybe (listToMaybe)
 import           Data.Monoid ((<>))
 import           Data.Text (Text)
 import           Database.Redis as R
-import           Filesystem.Path hiding ((</>))
 import           Network.HTTP.Conduit (withManager, responseBody, RequestBody(..))
 import           Network.HTTP.Types.Method (parseMethod, StdMethod(..))
 import           Network.HTTP.Types.Status (status200)
@@ -95,11 +94,11 @@ main = do
       run cfgBindPort $ seedApplication env staticMiddleware
 
 seedApplication :: SeedEnv -> Application -> Application
-seedApplication SeedEnv{..} staticMiddleware req = do
+seedApplication SeedEnv{..} staticMiddleware req respond = do
   logInfo $ T.concat ["/", T.intercalate "/" $ pathInfo req]
   case parseMethod (requestMethod req) of
     Right GET -> case pathInfo req of
-      ["health"] -> s200 ()
+      ["health"] -> respond $ s200 ()
 #ifdef USE_REDIS
       -- curl http://localhost:3000/redis/get/foo
       ["redis", "get", rdsKey] -> do
@@ -107,13 +106,13 @@ seedApplication SeedEnv{..} staticMiddleware req = do
                                                       $ R.get
                                                       $ text2ByteString rdsKey
         case eKey of
-          Left rep -> logError (show rep) >> s500
+          Left rep -> logError (show rep) >> respond s500
           Right maybeRedisValue -> case maybeRedisValue of
-            Nothing -> s200 ()
-            Just redisValue -> s200 $ byteString2Text redisValue
+            Nothing -> respond $ s200 ()
+            Just redisValue -> respond $ s200 $ byteString2Text redisValue
 #endif
       -- try to find HTML to return
-      path -> staticMiddleware req
+      path -> staticMiddleware req respond
     Right POST -> case pathInfo req of
       -- goto http://localhost:3000/image_form.html
       ["upload", "image"] -> do
@@ -123,23 +122,23 @@ seedApplication SeedEnv{..} staticMiddleware req = do
         images <- liftM (filter ((=="image/jpeg") . fileContentType . snd) . snd)
                 $ parseRequestBody lbsBackEnd req
         mapM (logInfo . B.append "uploaded file " . fileName . snd) images
-        s200 ()
+        respond $ s200 ()
       
       -- curl -d @public/some.json http://localhost:3000/upload/json
       ["upload", "json"] -> do
-        (maybeSomeJson :: Maybe SomeJson) <- requestBody req $$ extractJSONBody
+        (maybeSomeJson :: Maybe SomeJson) <- requestBody req >>= extractJSONBody
         case maybeSomeJson of
-          Nothing -> logWarn ("/upload/json bad input" :: Text) >> s400
+          Nothing -> logWarn ("/upload/json bad input" :: Text) >> respond s400
           Just (SomeJson someKey someOtherKey) -> do
             logInfo ("uploaded some json" :: Text)
             logInfo $ T.append "someKey: " someKey
             logInfo $ T.append "someOtherKey: " someOtherKey
-            s200 ()
+            respond $ s200 ()
       
       -- curl -d @public/some.json http://localhost:3000/upload/aws
       ["upload", "aws"] -> do
         -- read and gzip
-        someJSON <- liftM compress $ requestBody req $$ CB.sinkLbs
+        someJSON <- liftM (compress . BLC.fromStrict) $ requestBody req
         
         -- upload to S3
         withManager $ \mgr -> Aws.pureAws awsCfg s3Cfg mgr
@@ -151,7 +150,7 @@ seedApplication SeedEnv{..} staticMiddleware req = do
           , poAcl = Just AclPublicRead
           }
         
-        s200 ()
+        respond $ s200 ()
 #ifdef USE_REDIS
       -- curl -d foo=bar http://localhost:3000/redis/set
       ["redis", "set"] -> do
@@ -159,9 +158,9 @@ seedApplication SeedEnv{..} staticMiddleware req = do
         case params of
           [(key, value)] -> do
             runRedis rConn $ R.set key value
-            s201 ()
-          otherwise -> s404
+            respond $ s201 ()
+          otherwise -> respond s404
 #endif
       otherwise -> do
         logInfo ("Right POST otherwise" :: Text)
-        s404
+        respond s404

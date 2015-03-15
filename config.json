@@ -1,3 +1,4 @@
 {
-  "fill in values from the Config type in Seed.Data": "e.g., \"bindPort\":3001"
+  "fill in values from the Config type in Seed.Data": "e.g., \"bindPort\":3001",
+  "bindPort": 3001
 }
