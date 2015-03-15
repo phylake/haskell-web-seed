@@ -1,5 +1,4 @@
-Haskell Web seed
-================
+# Haskell Web seed [![Build Status](https://travis-ci.org/phylake/haskell-web-seed.svg)](https://travis-ci.org/phylake/haskell-web-seed)
 
 Starter app for web development
 - Logging with [fast-logger](http://www.yesodweb.com/blog/2014/01/new-fast-logger)
