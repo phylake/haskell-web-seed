@@ -116,9 +116,9 @@ seedApplication SeedEnv{..} staticMiddleware req respond = do
     Right POST -> case pathInfo req of
       -- goto http://localhost:3000/image_form.html
       ["upload", "image"] -> do
-        -- http://hackage.haskell.org/package/wai-extra-2.1.1.2/docs/Network-Wai-Parse.html#v:parseRequestBody
-        -- http://hackage.haskell.org/package/wai-extra-2.1.1.2/docs/Network-Wai-Parse.html#v:fileContentType
-        -- http://hackage.haskell.org/package/wai-extra-2.1.1.2/docs/Network-Wai-Parse.html#v:lbsBackEnd
+        -- http://hackage.haskell.org/package/wai-extra-3.0.4.1/docs/Network-Wai-Parse.html#v:parseRequestBody
+        -- http://hackage.haskell.org/package/wai-extra-3.0.4.1/docs/Network-Wai-Parse.html#v:fileContentType
+        -- http://hackage.haskell.org/package/wai-extra-3.0.4.1/docs/Network-Wai-Parse.html#v:lbsBackEnd
         images <- liftM (filter ((=="image/jpeg") . fileContentType . snd) . snd)
                 $ parseRequestBody lbsBackEnd req
         mapM (logInfo . B.append "uploaded file " . fileName . snd) images
