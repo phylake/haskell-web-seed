@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PolymorphicComponents #-}
+{-# LANGUAGE RankNTypes #-}
 module Seed.Data where
 
 import           Control.Applicative
@@ -38,9 +38,9 @@ instance FromJSON Config where
   parseJSON _ = mzero
 
 data SeedEnv = SeedEnv {
-                         logInfo :: (forall a. ToLogStr a => a -> IO ())
-                       , logWarn :: (forall a. ToLogStr a => a -> IO ())
-                       , logError :: (forall a. ToLogStr a => a -> IO ())
+                         logInfo :: (forall a. ToLogStr a => Text -> [(Text, a)] -> IO ())
+                       , logWarn :: (forall a. ToLogStr a => Text -> [(Text, a)] -> IO ())
+                       , logError :: (forall a. ToLogStr a => Text -> [(Text, a)] -> IO ())
 #ifdef USE_REDIS
                        , rConn :: R.Connection
 #endif

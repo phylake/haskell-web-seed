@@ -76,9 +76,9 @@ main = do
       logWarnSet <- newFileLoggerSet defaultBufSize $ cfgLogDir </> "warn.log"
       logErrorSet <- newFileLoggerSet defaultBufSize $ cfgLogDir </> "error.log"
 #endif
-      let logInfo str = pushLogStr logInfoSet $ toLogStr str <> "\n"
-      let logWarn str = pushLogStr logWarnSet $ toLogStr str <> "\n"
-      let logError str = pushLogStr logErrorSet $ toLogStr str <> "\n"
+      let logInfo str = pushLogStr logInfoSet . structuredLogStr str
+      let logWarn str = pushLogStr logWarnSet . structuredLogStr str
+      let logError str = pushLogStr logErrorSet . structuredLogStr str
       let logSets = [logInfoSet, logWarnSet, logErrorSet]
 
       let env = SeedEnv{..}
@@ -89,13 +89,13 @@ main = do
       installHandler sigINT (Catch $ sigINTHandler tid logSets) Nothing
       -- END signals
 
-      logInfo $ "starting haskell-web-seed on " ++ show cfgBindPort
+      logInfo "starting haskell-web-seed" [("Port", show cfgBindPort)]
       let staticMiddleware = staticApp $ defaultFileServerSettings "public/"
       run cfgBindPort $ seedApplication env staticMiddleware
 
 seedApplication :: SeedEnv -> Application -> Application
 seedApplication SeedEnv{..} staticMiddleware req respond = do
-  logInfo $ T.concat ["/", T.intercalate "/" $ pathInfo req]
+  logInfo path ([] :: [(Text, Text)])
   case parseMethod (requestMethod req) of
     Right GET -> case pathInfo req of
       ["health"] -> respond $ s200 ()
@@ -121,18 +121,16 @@ seedApplication SeedEnv{..} staticMiddleware req respond = do
         -- http://hackage.haskell.org/package/wai-extra-3.0.4.1/docs/Network-Wai-Parse.html#v:lbsBackEnd
         images <- liftM (filter ((=="image/jpeg") . fileContentType . snd) . snd)
                 $ parseRequestBody lbsBackEnd req
-        mapM (logInfo . B.append "uploaded file " . fileName . snd) images
+        mapM_ (logInfo "uploaded file" . (:[]) .  (,) "File" . fileName . snd) images
         respond $ s200 ()
       
       -- curl -d @public/some.json http://localhost:3000/upload/json
       ["upload", "json"] -> do
         (maybeSomeJson :: Maybe SomeJson) <- requestBody req >>= extractJSONBody
         case maybeSomeJson of
-          Nothing -> logWarn ("/upload/json bad input" :: Text) >> respond s400
+          Nothing -> logWarn "bad input" [("Path", "/upload/json" :: Text)] >> respond s400
           Just (SomeJson someKey someOtherKey) -> do
-            logInfo ("uploaded some json" :: Text)
-            logInfo $ T.append "someKey: " someKey
-            logInfo $ T.append "someOtherKey: " someOtherKey
+            logInfo "uploaded some json" [("someKey", someKey), ("someOtherKey", someOtherKey)]
             respond $ s200 ()
       
       -- curl -d @public/some.json http://localhost:3000/upload/aws
@@ -149,7 +147,7 @@ seedApplication SeedEnv{..} staticMiddleware req respond = do
           , poContentEncoding = Just "gzip"
           , poAcl = Just AclPublicRead
           }
-        
+
         respond $ s200 ()
 #ifdef USE_REDIS
       -- curl -d foo=bar http://localhost:3000/redis/set
@@ -162,5 +160,7 @@ seedApplication SeedEnv{..} staticMiddleware req respond = do
           otherwise -> respond s404
 #endif
       otherwise -> do
-        logInfo ("Right POST otherwise" :: Text)
+        logInfo "Right POST otherwise" [("Path", path)]
         respond s404
+  where
+    path = T.concat ["/", T.intercalate "/" $ pathInfo req]

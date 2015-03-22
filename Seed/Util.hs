@@ -1,10 +1,18 @@
-module Seed.Util where
+{-# LANGUAGE RankNTypes #-}
+module Seed.Util (
+  extractJSONBody
+, sigINTHandler
+, text2ByteString
+, byteString2Text
+, structuredLogStr
+) where
 
 import           Control.Concurrent (ThreadId)
 import           Data.Aeson as JSON
+import           Data.Monoid ((<>))
 import           Data.Text (Text)
 import           System.Exit (ExitCode(ExitSuccess))
-import           System.Log.FastLogger (rmLoggerSet, LoggerSet)
+import           System.Log.FastLogger
 import qualified Control.Exception as E
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy.Char8 as BLC
@@ -28,3 +36,11 @@ text2ByteString = BC.pack . T.unpack
 
 byteString2Text :: BC.ByteString -> Text
 byteString2Text = T.pack . BC.unpack
+
+-- | Create a structured key-value pair log that works with logging services
+-- like Loggly and Splunk
+structuredLogStr :: forall a. ToLogStr a => Text -> [(Text, a)] -> LogStr
+structuredLogStr msg kvps = foldl appendKvps (toLogStr msg) kvps
+  where
+    appendKvps acc (k, v) = acc <> toLogStr " "
+                         <> toLogStr k <> toLogStr "=" <> toLogStr v
